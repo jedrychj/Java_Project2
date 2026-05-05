@@ -3,33 +3,29 @@ import java.awt.*;
 
 void main() {
     System.out.println("tu kod");
-
-    //ForkJoinPool pool = ForkJoinPool.commonPool();
-
     //int proc = Runtime.getRuntime().availableProcessors();
     //System.out.println("Number of available core in the processor is: " + proc);
 
-    ArrayList<Points> obstacleList = new ArrayList<>();
+    int ScreenSizeX = 500;
+    int ScreenSizeY = 500;
+
+    ArrayList<Points> obstacleList = new ArrayList<>(); // spawnowanie losowe?
     obstacleList.add(new Points(200, 250, 300, 400));
     obstacleList.add(new Points(100, 150, 200, 300));
+
+    //ForkJoinPool pool = ForkJoinPool.commonPool(); -> lineList
 
     ArrayList<Points> lineList = new ArrayList<>(); // do tej listy będą dodawane linie zwrócone przy kalkulacjach
     lineList.add(new Points(10, 100, 10, 100)); // to są przykłady do testowania
     lineList.add(new Points(200, 30, 50, 120));
 
     LineDrawing d = new LineDrawing(lineList);
-    Screen S = new Screen(500,500, d);
+    Screen S = new Screen(ScreenSizeX,ScreenSizeY, d);
     S.paintObstacles(obstacleList);
 }
 
 class Screen extends JFrame {
-    int sizeX;
-    int sizeY;
-
     public Screen(int x, int y, LineDrawing drawing) {
-        this.sizeX = x;
-        this.sizeY = y;
-
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         drawing.setPreferredSize(new Dimension(x, y));
         this.getContentPane().add(drawing, BorderLayout.CENTER);
