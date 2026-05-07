@@ -1,5 +1,8 @@
 import javax.swing.*;
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.Random;
+
 
 void main() {
     System.out.println("tu kod");
@@ -9,9 +12,13 @@ void main() {
     int ScreenSizeX = 500;
     int ScreenSizeY = 500;
 
-    ArrayList<Points> obstacleList = new ArrayList<>(); // spawnowanie losowe?
-    obstacleList.add(new Points(200, 250, 300, 400));
-    obstacleList.add(new Points(100, 150, 200, 300));
+    // Najpierw generujemy przeszkody
+    ArrayList<Points> obstacleList = generateRandomObstacles(10, ScreenSizeX, ScreenSizeY);
+
+    // Następnie generujemy punkt, przekazując listę przeszkód do sprawdzenia kolizji
+    Point randomPoint = generateRandomPoint(ScreenSizeX, ScreenSizeY, obstacleList);
+
+    System.out.println("Zapisany punkt: X=" + randomPoint.x + ", Y=" + randomPoint.y);
 
     //ForkJoinPool pool = ForkJoinPool.commonPool(); -> lineList
 
@@ -23,6 +30,59 @@ void main() {
     Screen S = new Screen(ScreenSizeX,ScreenSizeY, d);
     S.paintObstacles(obstacleList);
 }
+
+
+
+// --- METODY DO GENEROWANIA DANYCH ---
+
+ArrayList<Points> generateRandomObstacles(int amount, int maxX, int maxY) {
+    ArrayList<Points> obstacles = new ArrayList<>();
+    Random rand = new Random();
+
+    for (int i = 0; i < amount; i++) {
+        // Losujemy jeden rozmiar dla szerokości i wysokości (od 10 do 50), aby uzyskać kwadrat
+        int size = rand.nextInt(41) + 10;
+
+        // Zabezpieczamy przed wyjściem kwadratu poza ekran
+        int x0 = rand.nextInt(maxX - size);
+        int y0 = rand.nextInt(maxY - size);
+
+        // Zarówno X jak i Y powiększamy o ten sam 'size'
+        obstacles.add(new Points(x0, x0 + size, y0, y0 + size));
+    }
+    return obstacles;
+}
+
+Point generateRandomPoint(int maxX, int maxY, ArrayList<Points> obstacles) {
+    Random rand = new Random();
+    Point p = new Point();
+    boolean isInsideObstacle;
+
+    // Pętla wykonuje się tak długo, aż wylosowany punkt znajdzie się na pustym polu
+    do {
+        p.x = rand.nextInt(maxX);
+        p.y = rand.nextInt(maxY);
+        isInsideObstacle = false;
+
+        // Sprawdzamy, czy wylosowane x i y znajdują się wewnątrz którejkolwiek przeszkody
+        for (Points obs : obstacles) {
+            // Zakładamy, że x0 to lewa krawędź, x1 to prawa, y0 to górna, a y1 to dolna
+            if (p.x >= obs.x0 && p.x <= obs.x1 && p.y >= obs.y0 && p.y <= obs.y1) {
+                isInsideObstacle = true;
+                break; // Punkt uderzył w przeszkodę, przerywamy pętlę for i losujemy ponownie
+            }
+        }
+    } while (isInsideObstacle); // Powtarzaj, jeśli punkt jest w przeszkodzie
+
+    return p;
+}
+
+
+
+
+
+
+
 
 class Screen extends JFrame {
     public Screen(int x, int y, LineDrawing drawing) {
