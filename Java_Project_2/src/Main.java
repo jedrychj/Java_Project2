@@ -52,7 +52,7 @@ ArrayList<Points> generateRandomObstacles(int amount, int maxX, int maxY) {
     }
     return obstacles;
 }
-
+//test 123
 Point generateRandomPoint(int maxX, int maxY, ArrayList<Points> obstacles) {
     Random rand = new Random();
     Point p = new Point();
