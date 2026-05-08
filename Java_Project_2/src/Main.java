@@ -92,7 +92,7 @@ class Beam {
         double currentX = startX;
         double currentY = startY;
 
-        // Punkt z którego wiązka wyleciała po ostatnim odbiciu
+
         double lastBounceX = startX;
         double lastBounceY = startY;
 
