@@ -1,8 +1,8 @@
 import javax.swing.*;
 import java.awt.*;
+import java.util.List;
 
 void main() {
-    System.out.println("tu kod");
     //int proc = Runtime.getRuntime().availableProcessors();
     //System.out.println("Number of available core in the processor is: " + proc);
 
@@ -13,27 +13,27 @@ void main() {
     //obstacleList.add(new Points(200, 250, 300, 400));
     //obstacleList.add(new Points(100, 150, 200, 300));
 
-    ArrayList<Points> obstacleList = Points.randomObstacles(20, screenSizeX, screenSizeY);
+    ArrayList<Points> obstacleList = Points.randomObstacles(10, screenSizeX, screenSizeY);
 
-    //ForkJoinPool pool = ForkJoinPool.commonPool(); -> lineList
-
-    ArrayList<Points> lineList = new ArrayList<>(); // do tej listy będą dodawane linie zwrócone przy kalkulacjach
+//    ArrayList<Points> lineList2 = new ArrayList<>(); // do tej listy będą dodawane linie zwrócone przy kalkulacjach
 //    lineList.add(new Points(100, 100, 10, 100)); // to są przykłady do testowania
 //    lineList.add(new Points(200, 30, 50, 120));
 
     Point startPoint = Beam.generateRandomPoint(screenSizeX, screenSizeY, obstacleList);
 
-    Beam beam = new Beam(startPoint.x, startPoint.y, Math.PI/8, 3);
-    Beam Top = new Beam(startPoint.x,startPoint.y, Math.PI/4, 2);
+//    Beam beam = new Beam(startPoint.x, startPoint.y, Math.PI/8, 3);
+//    Beam Top = new Beam(startPoint.x,startPoint.y, Math.PI/4, 2);
+//
+//    lineList2.addAll(beam.calcPoints(obstacleList, screenSizeX, screenSizeY));
+//    lineList2.addAll(Top.calcPoints(obstacleList, screenSizeX, screenSizeY));
 
-    beam.calcPoints(obstacleList, lineList, screenSizeX, screenSizeY);
-    Top.calcPoints(obstacleList, lineList, screenSizeX, screenSizeY);
-
-
+    ForkJoinPool pool = ForkJoinPool.commonPool();
+    Task t = new Task(10, 5, startPoint, obstacleList, screenSizeX, screenSizeY);
+    ArrayList<Points> lineList = pool.invoke(t);
 
     LineDrawing d = new LineDrawing(lineList);
-    Screen S = new Screen(screenSizeX,screenSizeY, d);
-    S.paintObstacles(obstacleList);
+    Screen s = new Screen(screenSizeX,screenSizeY, d);
+    s.paintObstacles(obstacleList);
 }
 
 class Screen extends JFrame {
@@ -132,7 +132,7 @@ class Beam {
         maxBounces = n;
     }
 
-    public void calcPoints(ArrayList<Points> obstacles, ArrayList<Points> resultLines, int screenX, int screenY) {
+    public ArrayList<Points> calcPoints(ArrayList<Points> obstacles, int screenX, int screenY) {
         double currentX = startX;
         double currentY = startY;
 
@@ -140,6 +140,8 @@ class Beam {
         double lastBounceY = startY;
 
         int bounceCount = 0;
+
+        ArrayList<Points> resultLines = new ArrayList<>();
 
         while (bounceCount <= maxBounces) {
             double prevX = currentX;
@@ -196,6 +198,7 @@ class Beam {
                 bounceCount++;
             }
         }
+        return resultLines;
     }
 
     public static Point generateRandomPoint(int maxX, int maxY, ArrayList<Points> obstacles) {
@@ -218,17 +221,81 @@ class Beam {
 
         return p;
     }
+}
 
+class Task extends RecursiveTask<ArrayList<Points>> {
 
+    int threshold = 2;
+    ArrayList<Beam> B;
 
+    ArrayList<Points> obstacles;
+    int maxX;
+    int maxY;
 
+    public Task(int amount, int nBounce, Point p, ArrayList<Points> obstacles, int screenX, int screenY) {
+        double step = 2*Math.PI / amount;
+        double shift = step*(new Random().nextInt(10)+1)/10; // żeby nie było pionowych/poziomych linii bo się kiepsko odbijają
 
+        B = new ArrayList<>();
 
+        for (int i=0; i<amount; i++){
+            B.add(new Beam(p.x, p.y, shift + step*i, nBounce));
+        }
 
+        this.obstacles = obstacles;
+        maxX = screenX;
+        maxY = screenY;
+    }
 
+    public Task(ArrayList<Beam> B, ArrayList<Points> obstacles, int screenX, int screenY) {
+        this.B = B;
 
+        this.obstacles = obstacles;
+        maxX = screenX;
+        maxY = screenY;
+    }
 
+    @Override
+    protected ArrayList<Points> compute() {
+        if (B.size() > threshold) {
+            Collection<Task> subtasks = divide();
+            ForkJoinTask.invokeAll(subtasks);
+            ArrayList<Points> result = new ArrayList<>();
 
+            for (Task t : subtasks) {
+                result.addAll(t.join());
+            }
 
+            return result;
+        } else {
+            return conquer();
+        }
+    }
 
+    private Collection<Task> divide(){
+        List<Task> dividedTasks = new ArrayList<>();
+        dividedTasks.add(new Task(this.split(B, true), this.obstacles, this.maxX, this.maxY));
+        dividedTasks.add(new Task(this.split(B, false), this.obstacles, this.maxX, this.maxY));
+        return dividedTasks;
+    }
+
+    private ArrayList<Points> conquer(){
+        ArrayList<Points> result = new ArrayList<>();
+        for (Beam b : this.B)
+        {
+            result.addAll(b.calcPoints(this.obstacles, this.maxX, this.maxY));
+        }
+        return result;
+    }
+
+    private ArrayList<Beam> split(ArrayList<Beam> A, boolean half){
+        ArrayList<Beam> B = new ArrayList<>();
+        if(half)
+            for(int i=0; i<A.size()/2; i++)
+                B.add(A.get(i));
+        else
+            for(int i=A.size()/2; i<A.size(); i++)
+                B.add(A.get(i));
+        return B;
+    }
 }
