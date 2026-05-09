@@ -6,27 +6,33 @@ void main() {
     //int proc = Runtime.getRuntime().availableProcessors();
     //System.out.println("Number of available core in the processor is: " + proc);
 
-    int ScreenSizeX = 500;
-    int ScreenSizeY = 500;
+    int screenSizeX = 500;
+    int screenSizeY = 500;
 
-    ArrayList<Points> obstacleList = new ArrayList<>(); // spawnowanie losowe?
-    obstacleList.add(new Points(200, 250, 300, 400));
-    obstacleList.add(new Points(100, 150, 200, 300));
+    //ArrayList<Points> obstacleList = new ArrayList<>(); // spawnowanie losowe?
+    //obstacleList.add(new Points(200, 250, 300, 400));
+    //obstacleList.add(new Points(100, 150, 200, 300));
+
+    ArrayList<Points> obstacleList = Points.randomObstacles(20, screenSizeX, screenSizeY);
 
     //ForkJoinPool pool = ForkJoinPool.commonPool(); -> lineList
 
     ArrayList<Points> lineList = new ArrayList<>(); // do tej listy będą dodawane linie zwrócone przy kalkulacjach
-    lineList.add(new Points(10, 100, 10, 100)); // to są przykłady do testowania
-    lineList.add(new Points(200, 30, 50, 120));
+//    lineList.add(new Points(100, 100, 10, 100)); // to są przykłady do testowania
+//    lineList.add(new Points(200, 30, 50, 120));
 
-    Beam beam = new Beam();
-    Beam Top = new Beam();
-    beam.calc_points(30, 10, 3, 4, obstacleList, lineList, ScreenSizeX, ScreenSizeY, 3);
-    Top.calc_points(30, 430, 2, -2.5, obstacleList, lineList, ScreenSizeX, ScreenSizeY, 2);
+    Point startPoint = Beam.generateRandomPoint(screenSizeX, screenSizeY, obstacleList);
+
+    Beam beam = new Beam(startPoint.x, startPoint.y, Math.PI/8, 3);
+    Beam Top = new Beam(startPoint.x,startPoint.y, Math.PI/4, 2);
+
+    beam.calcPoints(obstacleList, lineList, screenSizeX, screenSizeY);
+    Top.calcPoints(obstacleList, lineList, screenSizeX, screenSizeY);
+
 
 
     LineDrawing d = new LineDrawing(lineList);
-    Screen S = new Screen(ScreenSizeX,ScreenSizeY, d);
+    Screen S = new Screen(screenSizeX,screenSizeY, d);
     S.paintObstacles(obstacleList);
 }
 
@@ -50,7 +56,7 @@ class Screen extends JFrame {
     }
 }
 
-class Points {
+static class Points {
     int x1;
     int y1;
     int x2;
@@ -61,6 +67,32 @@ class Points {
         this.y1 = y1;
         this.x2 = x2;
         this.y2 = y2;
+    }
+
+    public static ArrayList<Points> randomObstacles(int amount, int maxX, int maxY) {
+        ArrayList<Points> obstacles = new ArrayList<>();
+        Random rand = new Random();
+        int margin = 10;
+        int minSize = 10;
+        int maxSize = 200;
+
+        for (int i = 0; i < amount; i++) {
+            int x1;
+            int y1;
+            int x2;
+            int y2;
+
+            do{
+                x1 = rand.nextInt(maxX - 2*margin - minSize) + margin;
+                y1 = rand.nextInt(maxY - 2*margin - minSize) + margin;
+
+                x2 = rand.nextInt(maxSize - minSize) + minSize;
+                y2 = rand.nextInt(maxSize - minSize) + minSize;
+            }while(x2*y2>90*90 || x1+x2>maxX-margin || y1+y2>maxY-margin);
+
+            obstacles.add(new Points(x1, y1, x1+x2, y1+y2));
+        }
+        return obstacles;
     }
 }
 
@@ -83,21 +115,31 @@ class LineDrawing extends JComponent{
 }
 
 class Beam {
-    public void calc_points(double startX, double startY, double velX, double velY,
-                                  ArrayList<Points> obstacles, ArrayList<Points> resultLines,
-                                  int screenX, int screenY, int maxBounces) {
-// dałem double a nie int bo mogły być błędy przy małych prędkościach
+    double startX;
+    double startY;
+    double velX;
+    double velY;
 
+    int maxBounces;
 
+    public Beam (double x, double y, double angle, int n){
+        startX = x;
+        startY = y;
+
+        velX = Math.sin(angle);
+        velY = -Math.cos(angle);
+
+        maxBounces = n;
+    }
+
+    public void calcPoints(ArrayList<Points> obstacles, ArrayList<Points> resultLines, int screenX, int screenY) {
         double currentX = startX;
         double currentY = startY;
-
 
         double lastBounceX = startX;
         double lastBounceY = startY;
 
         int bounceCount = 0;
-
 
         while (bounceCount <= maxBounces) {
             double prevX = currentX;
@@ -156,7 +198,26 @@ class Beam {
         }
     }
 
+    public static Point generateRandomPoint(int maxX, int maxY, ArrayList<Points> obstacles) {
+        Random rand = new Random();
+        Point p = new Point();
+        boolean isInsideObstacle;
+        do {
+            p.x = rand.nextInt(maxX);
+            p.y = rand.nextInt(maxY);
+            isInsideObstacle = false;
 
+            for (Points obs : obstacles) {
+                // Zakładamy, że x0 to lewa krawędź, x1 to prawa, y0 to górna, a y1 to dolna
+                if (p.x >= obs.x1 && p.x <= obs.x2 && p.y >= obs.y1 && p.y <= obs.y2) {
+                    isInsideObstacle = true;
+                    break;
+                }
+            }
+        } while (isInsideObstacle); // Powtarzaj, jeśli punkt jest w przeszkodzie
+
+        return p;
+    }
 
 
 
