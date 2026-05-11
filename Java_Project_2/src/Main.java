@@ -3,34 +3,25 @@ import java.awt.*;
 import java.util.List;
 
 void main() {
-    //int proc = Runtime.getRuntime().availableProcessors();
-    //System.out.println("Number of available core in the processor is: " + proc);
-
     int screenSizeX = 500;
     int screenSizeY = 500;
 
-    //ArrayList<Points> obstacleList = new ArrayList<>(); // spawnowanie losowe?
-    //obstacleList.add(new Points(200, 250, 300, 400));
-    //obstacleList.add(new Points(100, 150, 200, 300));
-
+    // utworzenie losowych przeszkód
     ArrayList<Points> obstacleList = Points.randomObstacles(10, screenSizeX, screenSizeY);
 
-//    ArrayList<Points> lineList2 = new ArrayList<>(); // do tej listy będą dodawane linie zwrócone przy kalkulacjach
-//    lineList.add(new Points(100, 100, 10, 100)); // to są przykłady do testowania
-//    lineList.add(new Points(200, 30, 50, 120));
-
+    // dobranie losowo punktu startowego
     Point startPoint = Beam.generateRandomPoint(screenSizeX, screenSizeY, obstacleList);
 
-//    Beam beam = new Beam(startPoint.x, startPoint.y, Math.PI/8, 3);
-//    Beam Top = new Beam(startPoint.x,startPoint.y, Math.PI/4, 2);
-//
-//    lineList2.addAll(beam.calcPoints(obstacleList, screenSizeX, screenSizeY));
-//    lineList2.addAll(Top.calcPoints(obstacleList, screenSizeX, screenSizeY));
-
+    // utworzenie puli wątków
     ForkJoinPool pool = ForkJoinPool.commonPool();
-    Task t = new Task(10, 5, startPoint, obstacleList, screenSizeX, screenSizeY);
+    // deklaracja zadania
+    Task t = new Task(10, 2, startPoint, obstacleList, screenSizeX, screenSizeY);
+    // przydzielenie zadania do puli wątków
     ArrayList<Points> lineList = pool.invoke(t);
 
+    //System.out.println(lineList);
+
+    // wyrysowanie linii i wyświetlenie okna
     LineDrawing d = new LineDrawing(lineList);
     Screen s = new Screen(screenSizeX,screenSizeY, d);
     s.paintObstacles(obstacleList);
@@ -56,6 +47,7 @@ class Screen extends JFrame {
     }
 }
 
+// reprezentacja linii oraz przeszkód
 static class Points {
     int x1;
     int y1;
@@ -96,6 +88,7 @@ static class Points {
     }
 }
 
+// klasa potrzebna do rysowania linii w oknie
 class LineDrawing extends JComponent{
     ArrayList<Points> list;
 
@@ -114,6 +107,7 @@ class LineDrawing extends JComponent{
     }
 }
 
+// klasa służąca do wyznaczania drogi przebytej przez wiązki
 class Beam {
     double startX;
     double startY;
@@ -132,6 +126,7 @@ class Beam {
         maxBounces = n;
     }
 
+    // wyznaczenie drogi wiązki
     public ArrayList<Points> calcPoints(ArrayList<Points> obstacles, int screenX, int screenY) {
         double currentX = startX;
         double currentY = startY;
@@ -223,30 +218,38 @@ class Beam {
     }
 }
 
+// pomocnicze zmienne do wyświetlania
+//int j=0;
+//int k=0;
+
+// klasa zadania
 class Task extends RecursiveTask<ArrayList<Points>> {
 
-    int threshold = 2;
+    int threshold = 20;
     ArrayList<Beam> B;
 
     ArrayList<Points> obstacles;
     int maxX;
     int maxY;
 
+    // konstruktor użyty przy początkowym utworzeniu zadania
     public Task(int amount, int nBounce, Point p, ArrayList<Points> obstacles, int screenX, int screenY) {
         double step = 2*Math.PI / amount;
         double shift = step*(new Random().nextInt(10)+1)/10; // żeby nie było pionowych/poziomych linii bo się kiepsko odbijają
 
-        B = new ArrayList<>();
+        this.B = new ArrayList<>();
 
         for (int i=0; i<amount; i++){
-            B.add(new Beam(p.x, p.y, shift + step*i, nBounce));
+            this.B.add(new Beam(p.x, p.y, shift + step*i, nBounce));
         }
+
 
         this.obstacles = obstacles;
         maxX = screenX;
         maxY = screenY;
     }
 
+    // konstruktor używany przy podziale zadania
     public Task(ArrayList<Beam> B, ArrayList<Points> obstacles, int screenX, int screenY) {
         this.B = B;
 
@@ -272,14 +275,18 @@ class Task extends RecursiveTask<ArrayList<Points>> {
         }
     }
 
+    // podział zadania na mniejsze
     private Collection<Task> divide(){
+        //System.out.println("dziele" + j++);
         List<Task> dividedTasks = new ArrayList<>();
-        dividedTasks.add(new Task(this.split(B, true), this.obstacles, this.maxX, this.maxY));
-        dividedTasks.add(new Task(this.split(B, false), this.obstacles, this.maxX, this.maxY));
+        dividedTasks.add(new Task(Task.split(B, true), this.obstacles, this.maxX, this.maxY));
+        dividedTasks.add(new Task(Task.split(B, false), this.obstacles, this.maxX, this.maxY));
         return dividedTasks;
     }
 
+    // wykonanie zadania
     private ArrayList<Points> conquer(){
+        //System.out.println("robie" + k++);
         ArrayList<Points> result = new ArrayList<>();
         for (Beam b : this.B)
         {
@@ -288,7 +295,8 @@ class Task extends RecursiveTask<ArrayList<Points>> {
         return result;
     }
 
-    private ArrayList<Beam> split(ArrayList<Beam> A, boolean half){
+    // funkcja pomocnicza przy podziale zadań
+    static private ArrayList<Beam> split(ArrayList<Beam> A, boolean half){
         ArrayList<Beam> B = new ArrayList<>();
         if(half)
             for(int i=0; i<A.size()/2; i++)
