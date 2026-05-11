@@ -15,14 +15,14 @@ void main() {
     // utworzenie puli wątków
     ForkJoinPool pool = ForkJoinPool.commonPool();
     // deklaracja zadania
-    Task t = new Task(10, 2, startPoint, obstacleList, screenSizeX, screenSizeY);
+    Task t = new Task(1000, 200, startPoint, obstacleList, screenSizeX, screenSizeY);
     // przydzielenie zadania do puli wątków
     ArrayList<Points> lineList = pool.invoke(t);
 
     // wyrysowanie linii i wyświetlenie okna
-    LineDrawing d = new LineDrawing(lineList);
-    Screen s = new Screen(screenSizeX,screenSizeY, d);
-    s.paintObstacles(obstacleList);
+//    LineDrawing d = new LineDrawing(lineList);
+//    Screen s = new Screen(screenSizeX,screenSizeY, d);
+//    s.paintObstacles(obstacleList);
 }
 
 class Screen extends JFrame {
@@ -216,6 +216,10 @@ class Beam {
     }
 }
 
+// pomocnicze zmienne do wyświetlania
+int j=0;
+int k=0;
+
 // klasa zadania
 class Task extends RecursiveTask<ArrayList<Points>> {
 
@@ -271,6 +275,7 @@ class Task extends RecursiveTask<ArrayList<Points>> {
 
     // podział zadania na mniejsze
     private Collection<Task> divide(){
+        System.out.println("dziele" + j++);
         List<Task> dividedTasks = new ArrayList<>();
         dividedTasks.add(new Task(Task.split(B, true), this.obstacles, this.maxX, this.maxY));
         dividedTasks.add(new Task(Task.split(B, false), this.obstacles, this.maxX, this.maxY));
@@ -279,6 +284,7 @@ class Task extends RecursiveTask<ArrayList<Points>> {
 
     // wykonanie zadania
     private ArrayList<Points> conquer(){
+        System.out.println("robie" + k++);
         ArrayList<Points> result = new ArrayList<>();
         for (Beam b : this.B)
         {
